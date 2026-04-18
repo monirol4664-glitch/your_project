@@ -5,11 +5,13 @@
     <ApplicationId>org.aperture4.math</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>  <!-- This prevents warnings from breaking build -->
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
-    <PackageReference Include="MathNet.Symbolics" Version="0.25.0" />
+    <PackageReference Include="MathNet.Symbolics" Version="0.24.0" />  <!-- Older stable version -->
     <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.0" />
   </ItemGroup>
 </Project>
