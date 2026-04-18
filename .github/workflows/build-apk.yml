@@ -30,7 +30,10 @@ jobs:
           python3-dev \
           zlib1g-dev \
           libncurses5-dev \
-          libncursesw5-dev
+          libncursesw5-dev \
+          git \
+          zip \
+          unzip
     
     - name: Install Python dependencies
       run: |
@@ -41,6 +44,11 @@ jobs:
       run: |
         echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+        echo "PATH=$PATH:/usr/lib/android-sdk/platform-tools" >> $GITHUB_ENV
+    
+    - name: Create version file
+      run: |
+        echo '__version__ = "1.0.0"' > src/mathematica_console/__init__.py
     
     - name: Build APK with Buildozer
       run: |
