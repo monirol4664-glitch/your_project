@@ -2,35 +2,50 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
     - uses: actions/checkout@v4
-
-    # Install .NET 8 (not the latest .NET 9 or 10)
-    - name: Setup .NET 8
+    
+    # Remove any pre-installed .NET first
+    - name: Remove existing .NET
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf ~/.dotnet
+    
+    # Install .NET 7 specifically
+    - name: Setup .NET 7
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
-
-    # Now install the MAUI workload for .NET 8
+        dotnet-version: '7.0.x'
+    
+    # Verify .NET version
+    - name: Check .NET version
+      run: dotnet --info
+    
+    # Install MAUI for .NET 7
     - name: Install MAUI Workload
       run: dotnet workload install maui-android
-
+    
     - name: Restore dependencies
       run: dotnet restore
-
+    
     - name: Build Android APK
-      run: dotnet build -c Release -f net8.0-android --no-restore
-
+      run: dotnet build -c Release -f net7.0-android --no-restore
+    
     - name: Publish APK
-      run: dotnet publish -f net8.0-android -c Release --no-build -o output
-
+      run: dotnet publish -f net7.0-android -c Release --no-build -o output
+    
+    - name: Find APK
+      run: |
+        find . -name "*.apk" -exec cp {} aperture4.apk \; 2>/dev/null || echo "Searching..."
+        ls -la output/ || echo "Checking output..."
+    
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
@@ -38,3 +53,4 @@ jobs:
         path: |
           **/*.apk
           output/*.apk
+          *.apk
