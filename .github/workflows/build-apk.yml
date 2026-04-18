@@ -16,24 +16,22 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk \
-            autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev
+          sudo apt install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev cmake libffi-dev libssl-dev
       
       - uses: android-actions/setup-android@v3
       
       - name: Install buildozer
         run: |
           pip install --upgrade pip
-          pip install cython buildozer
+          pip install buildozer cython
       
       - name: Create buildozer.spec
         run: |
           cat > buildozer.spec << 'EOF'
 [app]
-
 title = Python Console
 package.name = pythonconsole
 package.domain = org.pythonapp
@@ -51,7 +49,6 @@ android.permissions = WRITE_EXTERNAL_STORAGE
 android.debug = True
 
 [buildozer]
-
 log_level = 2
 warn_on_root = 1
 EOF
