@@ -1,74 +1,34 @@
 import React, { useState } from 'react';
+import Navigation from './components/Navigation';
+import Solver from './components/Solver';
+import Plotter from './components/Plotter';
+import TableGenerator from './components/TableGenerator';
+import './styles/App.css';
 
 function App() {
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
-  const [c, setC] = useState('');
-  const [result, setResult] = useState('');
-
-  const solve = () => {
-    const numA = parseFloat(a);
-    const numB = parseFloat(b);
-    const numC = parseFloat(c);
-
-    if (isNaN(numA) || isNaN(numB) || isNaN(numC)) {
-      setResult('Enter valid numbers');
-      return;
-    }
-
-    if (numA === 0) {
-      setResult('a cannot be zero');
-      return;
-    }
-
-    const d = numB * numB - 4 * numA * numC;
-
-    if (d < 0) {
-      setResult('No real solutions');
-    } else if (d === 0) {
-      const x = -numB / (2 * numA);
-      setResult(`x = ${x.toFixed(4)}`);
-    } else {
-      const x1 = (-numB + Math.sqrt(d)) / (2 * numA);
-      const x2 = (-numB - Math.sqrt(d)) / (2 * numA);
-      setResult(`x₁ = ${x1.toFixed(4)}\nx₂ = ${x2.toFixed(4)}`);
-    }
-  };
+  const [activeTab, setActiveTab] = useState('solver');
 
   return (
-    <div style={{ padding: 20, fontFamily: 'Arial' }}>
-      <h1>🧮 Math Tools</h1>
-      <h3>Quadratic Solver: ax² + bx + c = 0</h3>
+    <div className="app">
+      <header className="app-header">
+        <h1>
+          <span className="icon">📐</span>
+          MathMaster Pro
+        </h1>
+        <p>Advanced Mathematics Toolkit</p>
+      </header>
       
-      <input 
-        type="number" 
-        placeholder="a" 
-        value={a} 
-        onChange={e => setA(e.target.value)}
-        style={{ display: 'block', margin: 10, padding: 10, width: 200 }}
-      />
-      <input 
-        type="number" 
-        placeholder="b" 
-        value={b} 
-        onChange={e => setB(e.target.value)}
-        style={{ display: 'block', margin: 10, padding: 10, width: 200 }}
-      />
-      <input 
-        type="number" 
-        placeholder="c" 
-        value={c} 
-        onChange={e => setC(e.target.value)}
-        style={{ display: 'block', margin: 10, padding: 10, width: 200 }}
-      />
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <button onClick={solve} style={{ margin: 10, padding: 10, width: 200, background: 'blue', color: 'white' }}>
-        Solve
-      </button>
+      <main className="app-main">
+        {activeTab === 'solver' && <Solver />}
+        {activeTab === 'plotter' && <Plotter />}
+        {activeTab === 'table' && <TableGenerator />}
+      </main>
       
-      {result && (
-        <pre style={{ margin: 20, fontSize: 16 }}>{result}</pre>
-      )}
+      <footer className="app-footer">
+        <p>© 2024 MathMaster Pro | Works Offline</p>
+      </footer>
     </div>
   );
 }
