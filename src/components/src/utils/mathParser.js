@@ -27,4 +27,18 @@ export function evaluateFunction(funcStr, x) {
 
 export function evaluateExpression(expr, variables = {}) {
   try {
-   
+    let expression = expr.replace(/\^/g, '**');
+    return evaluate(expression, variables);
+  } catch (error) {
+    return NaN;
+  }
+}
+
+export function simplifyExpression(expr) {
+  try {
+    const result = evaluate(expr);
+    return result.toString();
+  } catch {
+    return expr;
+  }
+}
