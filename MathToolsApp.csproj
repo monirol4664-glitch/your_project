@@ -9,8 +9,6 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    
-    <RuntimeIdentifiers>android-arm;android-arm64</RuntimeIdentifiers>
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
