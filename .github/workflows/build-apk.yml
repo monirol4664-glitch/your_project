@@ -3,8 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -14,103 +12,35 @@ jobs:
       contents: write
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
     - name: Setup .NET 9
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x  # Changed to .NET 9
+        dotnet-version: 9.0.x
     
     - name: Install Android workload
-      run: |
-        dotnet workload install android
-        dotnet workload update
+      run: dotnet workload install android
     
-    - name: Setup Java JDK
+    - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'microsoft'
         java-version: '17'
     
-    - name: List files for debugging
-      run: |
-        echo "Current directory:"
-        pwd
-        echo "All csproj files:"
-        find . -name "*.csproj" -type f
-    
     - name: Restore dependencies
-      run: |
-        # Find the csproj file automatically
-        CSPROJ_FILE=$(find . -name "*.csproj" -type f | grep -v "/obj/" | head -n 1)
-        if [ -z "$CSPROJ_FILE" ]; then
-          echo "No csproj file found! Creating one..."
-          mkdir -p src/MyAndroidApp
-          cd src/MyAndroidApp
-          dotnet new android -n MyAndroidApp -f net9.0-android
-          cd ../..
-        else
-          echo "Found csproj: $CSPROJ_FILE"
-          dotnet restore "$CSPROJ_FILE"
-        fi
+      run: dotnet restore
     
-    - name: Build Debug APK
+    - name: Build and publish APK
       run: |
-        # Find the csproj file
-        CSPROJ_FILE=$(find . -name "*.csproj" -type f | grep -v "/obj/" | head -n 1)
-        if [ -z "$CSPROJ_FILE" ]; then
-          echo "ERROR: No csproj file found!"
-          exit 1
-        fi
-        
-        echo "Building: $CSPROJ_FILE"
-        PROJECT_DIR=$(dirname "$CSPROJ_FILE")
-        
-        cd "$PROJECT_DIR"
-        dotnet build -c Debug -f net9.0-android --ignore-failed-sources
-        dotnet publish -c Debug -f net9.0-android -p:AndroidPackageFormat=apk --ignore-failed-sources
-        cd -
+        cd src/MyAndroidApp
+        dotnet build -c Debug -f net9.0-android
+        dotnet publish -c Debug -f net9.0-android -p:AndroidPackageFormat=apk
+        cd ../..
     
-    - name: Find and rename APK
-      run: |
-        # Find the generated APK
-        APK_PATH=$(find . -name "*.apk" -type f | grep -v "/obj/" | head -n 1)
-        if [ -z "$APK_PATH" ]; then
-          echo "No APK found! Checking build output..."
-          find . -name "*.apk" -type f
-          exit 1
-        fi
-        
-        echo "Found APK at: $APK_PATH"
-        cp "$APK_PATH" "MyAndroidApp-debug.apk"
-        ls -la MyAndroidApp-debug.apk
-    
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: MyAndroidApp-v1.0-${{ github.run_number }}
-        path: MyAndroidApp-debug.apk
-        retention-days: 90
-    
-    - name: Create Release
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: build-v1.0.${{ github.run_number }}
-        name: Android APK Build ${{ github.run_number }}
-        body: |
-          ## 📱 Android APK Build Successful!
-          
-          **Build Details:**
-          - Build Number: ${{ github.run_number }}
-          - Commit: ${{ github.sha }}
-          - Date: ${{ github.event.head_commit.timestamp }}
-          - .NET Version: 9.0
-          
-          **Download:** APK attached below
-        files: MyAndroidApp-debug.apk
-        draft: false
-        prerelease: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: MyAndroidApp
+        path: '**/*.apk'
+        if-no-files-found: error
