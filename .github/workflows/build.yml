@@ -12,22 +12,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup .NET
+    - name: Setup .NET 9
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
         
-    - name: Install MAUI
-      run: dotnet workload install maui-android
-    
-    - name: Restore
+    - name: Verify .NET version
+      run: dotnet --version
+      
+    - name: Install MAUI workloads
+      run: |
+        dotnet workload update
+        dotnet workload install maui-android --version 9.0.21
+      
+    - name: Restore project
       run: dotnet restore MathToolsApp.csproj
       
     - name: Build APK
-      run: dotnet build MathToolsApp.csproj -c Debug -f net9.0-android
+      run: dotnet build MathToolsApp.csproj -c Release -f net9.0-android
       
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: MathToolsApp-debug
+        name: MathToolsApp
         path: '**/*.apk'
