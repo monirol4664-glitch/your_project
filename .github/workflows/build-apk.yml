@@ -32,47 +32,11 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
     
-    - name: Create Android project with gradlew
+    - name: Create Android project
       run: |
-        # Create directory structure
         mkdir -p android/app/src/main/assets
         mkdir -p android/app/src/main/java/com/mathapp
         cp -r build/* android/app/src/main/assets/
-        
-        # Create gradle wrapper files
-        cd android
-        
-        # Create gradlew script
-        cat > gradlew << 'EOF'
-        #!/bin/sh
-        GRADLE_VERSION=7.5
-        GRADLE_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
-        GRADLE_ZIP="gradle-${GRADLE_VERSION}-bin.zip"
-        GRADLE_DIR="gradle-${GRADLE_VERSION}"
-        
-        if [ ! -d "$GRADLE_DIR" ]; then
-            echo "Downloading Gradle ${GRADLE_VERSION}..."
-            curl -L -o "$GRADLE_ZIP" "$GRADLE_URL"
-            unzip -q "$GRADLE_ZIP"
-            rm "$GRADLE_ZIP"
-        fi
-        
-        exec "$GRADLE_DIR/bin/gradle" "$@"
-        EOF
-        
-        chmod +x gradlew
-        
-        # Create gradle wrapper properties
-        mkdir -p wrapper
-        cat > wrapper/gradle-wrapper.properties << 'EOF'
-        distributionBase=GRADLE_USER_HOME
-        distributionPath=wrapper/dists
-        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
-        zipStoreBase=GRADLE_USER_HOME
-        zipStorePath=wrapper/dists
-        EOF
-        
-        cd ..
     
     - name: Create AndroidManifest.xml
       run: |
@@ -133,16 +97,11 @@ jobs:
                 classpath 'com.android.tools.build:gradle:7.4.2'
             }
         }
-        
         allprojects {
             repositories {
                 google()
                 mavenCentral()
             }
-        }
-        
-        task clean(type: Delete) {
-            delete rootProject.buildDir
         }
         EOF
     
@@ -167,6 +126,9 @@ jobs:
                     minifyEnabled false
                     proguardFiles getDefaultProguardFile('proguard-android.txt')
                 }
+                debug {
+                    debuggable true
+                }
             }
         }
         
@@ -178,44 +140,66 @@ jobs:
     - name: Create settings.gradle
       run: |
         cat > android/settings.gradle << 'EOF'
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        rootProject.name = "MathMaster"
         include ':app'
+        rootProject.name = "MathMaster"
         EOF
     
-    - name: Create gradle.properties
-      run: |
-        cat > android/gradle.properties << 'EOF'
-        org.gradle.jvmargs=-Xmx2048m
-        android.useAndroidX=true
-        android.enableJetifier=true
-        EOF
-    
-    - name: Build APK
+    - name: Create gradle wrapper
       run: |
         cd android
-        ./gradlew assembleRelease --no-daemon
+        mkdir -p wrapper
+        cat > wrapper/gradle-wrapper.properties << 'EOF'
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-7.5-bin.zip
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        EOF
+        
+        cat > gradlew << 'EOF'
+        #!/bin/sh
+        GRADLE_VERSION=7.5
+        GRADLE_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+        GRADLE_ZIP="gradle-${GRADLE_VERSION}-bin.zip"
+        GRADLE_DIR="gradle-${GRADLE_VERSION}"
+        
+        if [ ! -d "$GRADLE_DIR" ]; then
+            curl -L -o "$GRADLE_ZIP" "$GRADLE_URL"
+            unzip -q "$GRADLE_ZIP"
+            rm "$GRADLE_ZIP"
+        fi
+        
+        exec "$GRADLE_DIR/bin/gradle" "$@"
+        EOF
+        chmod +x gradlew
         cd ..
     
-    - name: Find and rename APK
+    - name: Build Debug APK (Signed)
       run: |
-        find android -name "*.apk" -exec cp {} MathMaster.apk \;
-        echo "APK created successfully"
+        cd android
+        ./gradlew assembleDebug --no-daemon
+        cd ..
     
-    - name: Upload APK
+    - name: Create Debug Keystore and Sign
+      run: |
+        cd android
+        # Create debug keystore
+        keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, O=Android, C=US"
+        
+        # Sign the APK
+        jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android app/build/outputs/apk/debug/app-debug.apk androiddebugkey
+        
+        # Verify signature
+        jarsigner -verify app/build/outputs/apk/debug/app-debug.apk
+        
+        # Align the APK
+        $ANDROID_HOME/build-tools/33.0.0/zipalign -v -p 4 app/build/outputs/apk/debug/app-debug.apk MathMaster-signed.apk
+        
+        cd ..
+    
+    - name: Upload Signed APK
       uses: actions/upload-artifact@v4
       with:
-        name: MathMaster-App
-        path: MathMaster.apk
+        name: MathMaster-Signed
+        path: android/MathMaster-signed.apk
+        retention-days: 90
