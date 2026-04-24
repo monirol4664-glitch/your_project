@@ -1,4 +1,4 @@
-name: Build APK using Docker (Non-root)
+name: Build APK using Docker
 
 on:
   push:
@@ -13,12 +13,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Build APK with Docker
+    - name: Build APK with Docker (Non-root user)
       run: |
         docker run --rm \
           -v $(pwd):/home/user/hostdir \
+          -w /home/user/hostdir \
+          --user 1000:1000 \
           kivy/buildozer:latest \
-          bash -c "cd /home/user/hostdir && buildozer android debug --no-root-warning"
+          buildozer android debug
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
