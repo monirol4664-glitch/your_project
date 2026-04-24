@@ -5,15 +5,11 @@ import 'package:flutter_highlight/themes/monokai-sublime.dart';
 class CodeEditor extends StatefulWidget {
   final String code;
   final Function(String) onChanged;
-  final List<String> suggestions;
-  final Function(String) onSuggestionSelected;
   
   const CodeEditor({
     super.key,
     required this.code,
     required this.onChanged,
-    this.suggestions = const [],
-    required this.onSuggestionSelected,
   });
   
   @override
@@ -22,7 +18,6 @@ class CodeEditor extends StatefulWidget {
 
 class _CodeEditorState extends State<CodeEditor> {
   late TextEditingController _controller;
-  bool _showSuggestions = false;
   
   final List<String> _pythonKeywords = [
     'def', 'class', 'import', 'from', 'as', 'if', 'elif', 'else',
@@ -30,8 +25,10 @@ class _CodeEditorState extends State<CodeEditor> {
     'except', 'finally', 'raise', 'with', 'lambda', 'and', 'or',
     'not', 'is', 'in', 'True', 'False', 'None', 'print', 'len',
     'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple',
-    'open', 'file', 'input', 'abs', 'sum', 'min', 'max', 'sorted',
   ];
+  
+  List<String> _suggestions = [];
+  bool _showSuggestions = false;
   
   @override
   void initState() {
@@ -48,7 +45,10 @@ class _CodeEditorState extends State<CodeEditor> {
   void _checkForSuggestions() {
     final text = _controller.text;
     final cursorPos = _controller.selection.baseOffset;
-    if (cursorPos < 0) return;
+    if (cursorPos < 0) {
+      setState(() => _showSuggestions = false);
+      return;
+    }
     
     final currentWord = _getCurrentWord(text, cursorPos);
     
@@ -58,9 +58,8 @@ class _CodeEditorState extends State<CodeEditor> {
           .toList();
       
       setState(() {
-        widget.suggestions.clear();
-        widget.suggestions.addAll(matches.take(5));
-        _showSuggestions = matches.isNotEmpty;
+        _suggestions = matches.take(5).toList();
+        _showSuggestions = _suggestions.isNotEmpty;
       });
     } else {
       setState(() => _showSuggestions = false);
@@ -73,6 +72,22 @@ class _CodeEditorState extends State<CodeEditor> {
       start--;
     }
     return text.substring(start, position);
+  }
+  
+  void _insertSuggestion(String suggestion) {
+    final text = _controller.text;
+    final cursorPos = _controller.selection.baseOffset;
+    final currentWord = _getCurrentWord(text, cursorPos);
+    final startPos = cursorPos - currentWord.length;
+    
+    final newText = text.substring(0, startPos) + 
+                    suggestion + 
+                    text.substring(cursorPos);
+    
+    _controller.text = newText;
+    _controller.selection = TextSelection.collapsed(offset: startPos + suggestion.length);
+    widget.onChanged(newText);
+    setState(() => _showSuggestions = false);
   }
   
   @override
@@ -97,7 +112,7 @@ class _CodeEditorState extends State<CodeEditor> {
             },
           ),
         ),
-        if (_showSuggestions && widget.suggestions.isNotEmpty)
+        if (_showSuggestions && _suggestions.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 4),
             padding: const EdgeInsets.all(8),
@@ -107,10 +122,10 @@ class _CodeEditorState extends State<CodeEditor> {
             ),
             child: Wrap(
               spacing: 8,
-              children: widget.suggestions.map((suggestion) {
+              children: _suggestions.map((suggestion) {
                 return ActionChip(
                   label: Text(suggestion),
-                  onPressed: () => widget.onSuggestionSelected(suggestion),
+                  onPressed: () => _insertSuggestion(suggestion),
                   backgroundColor: Colors.blue[900],
                 );
               }).toList(),
