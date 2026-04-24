@@ -18,6 +18,7 @@ class CodeEditor extends StatefulWidget {
 
 class _CodeEditorState extends State<CodeEditor> {
   late TextEditingController _controller;
+  final FocusNode _focusNode = FocusNode();
   
   final List<String> _pythonKeywords = [
     'def', 'class', 'import', 'from', 'as', 'if', 'elif', 'else',
@@ -25,6 +26,9 @@ class _CodeEditorState extends State<CodeEditor> {
     'except', 'finally', 'raise', 'with', 'lambda', 'and', 'or',
     'not', 'is', 'in', 'True', 'False', 'None', 'print', 'len',
     'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple',
+    'open', 'file', 'input', 'abs', 'sum', 'min', 'max', 'sorted',
+    'append', 'extend', 'insert', 'remove', 'pop', 'clear', 'index',
+    'count', 'sort', 'reverse', 'copy', 'keys', 'values', 'items',
   ];
   
   List<String> _suggestions = [];
@@ -35,6 +39,13 @@ class _CodeEditorState extends State<CodeEditor> {
     super.initState();
     _controller = TextEditingController(text: widget.code);
     _controller.addListener(_onTextChange);
+    _focusNode.addListener(_onFocusChange);
+  }
+  
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) {
+      setState(() => _showSuggestions = false);
+    }
   }
   
   void _onTextChange() {
@@ -54,12 +65,12 @@ class _CodeEditorState extends State<CodeEditor> {
     
     if (currentWord.length >= 2) {
       final matches = _pythonKeywords
-          .where((kw) => kw.startsWith(currentWord.toLowerCase()))
+          .where((kw) => kw.toLowerCase().startsWith(currentWord.toLowerCase()))
           .toList();
       
       setState(() {
         _suggestions = matches.take(5).toList();
-        _showSuggestions = _suggestions.isNotEmpty;
+        _showSuggestions = _suggestions.isNotEmpty && _focusNode.hasFocus;
       });
     } else {
       setState(() => _showSuggestions = false);
@@ -105,7 +116,11 @@ class _CodeEditorState extends State<CodeEditor> {
             _controller.text,
             language: 'python',
             theme: monokaiSublimeTheme,
-            textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+            textStyle: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 14,
+              height: 1.4,
+            ),
             onChanged: (code) {
               _controller.text = code;
               widget.onChanged(code);
@@ -119,14 +134,20 @@ class _CodeEditorState extends State<CodeEditor> {
             decoration: BoxDecoration(
               color: Colors.grey[800],
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blueGrey),
             ),
             child: Wrap(
               spacing: 8,
+              runSpacing: 4,
               children: _suggestions.map((suggestion) {
                 return ActionChip(
-                  label: Text(suggestion),
+                  label: Text(
+                    suggestion,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                   onPressed: () => _insertSuggestion(suggestion),
-                  backgroundColor: Colors.blue[900],
+                  backgroundColor: Colors.deepPurple[800],
+                  labelStyle: const TextStyle(color: Colors.white),
                 );
               }).toList(),
             ),
@@ -138,6 +159,7 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 }
