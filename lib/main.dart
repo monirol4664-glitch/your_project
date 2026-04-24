@@ -20,6 +20,7 @@ class PythonIDEApp extends StatelessWidget {
           primaryColor: Colors.deepPurple,
           scaffoldBackgroundColor: Colors.grey[900],
           cardColor: Colors.grey[850],
+          useMaterial3: true,
         ),
         home: const EditorScreen(),
         debugShowCheckedModeBanner: false,
