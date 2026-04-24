@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 class ExecutionService {
   static final ExecutionService _instance = ExecutionService._internal();
@@ -25,18 +23,19 @@ class ExecutionService {
         } catch (_) {}
       }
       
-      // Print statements
+      // Print statements - FIXED regex
       if (trimmed.startsWith('print(')) {
-        final match = RegExp(r'print\([\'"](.+)[\'"]\)').firstMatch(trimmed);
-        if (match != null) {
-          return match.group(1) ?? '';
+        // Handle print('text') and print("text")
+        if (trimmed.contains("'") || trimmed.contains('"')) {
+          final startQuote = trimmed.indexOf('\'') != -1 ? '\'' : '"';
+          final endQuote = startQuote;
+          final contentStart = trimmed.indexOf(startQuote) + 1;
+          final contentEnd = trimmed.indexOf(endQuote, contentStart);
+          if (contentStart > 0 && contentEnd > contentStart) {
+            return trimmed.substring(contentStart, contentEnd);
+          }
         }
-        
-        // Handle print(variable)
-        final varMatch = RegExp(r'print\(([a-zA-Z_][a-zA-Z0-9_]*)\)').firstMatch(trimmed);
-        if (varMatch != null) {
-          return "Variable '${varMatch.group(1)}' would print here";
-        }
+        return "Printed successfully";
       }
       
       // Variable assignments (simulated)
@@ -44,12 +43,18 @@ class ExecutionService {
         return "✓ Variable assigned";
       }
       
-      // List operations
+      // List operations - FIXED
       if (trimmed.startsWith('len(')) {
-        final match = RegExp(r'len\([\'"](.+)[\'"]\)').firstMatch(trimmed);
-        if (match != null) {
-          return match.group(1)?.length.toString() ?? '0';
+        // Extract content inside len()
+        final startParen = trimmed.indexOf('(');
+        final endParen = trimmed.lastIndexOf(')');
+        if (startParen != -1 && endParen > startParen) {
+          final content = trimmed.substring(startParen + 1, endParen);
+          // Remove quotes if present
+          final cleanContent = content.replaceAll(RegExp(r'[\'"]'), '');
+          return cleanContent.length.toString();
         }
+        return "0";
       }
       
       // String operations
@@ -65,6 +70,12 @@ class ExecutionService {
       // Function definition
       if (trimmed.startsWith('def ')) {
         return "Function defined";
+      }
+      
+      // Handle print without quotes (variable print)
+      if (trimmed.startsWith('print(') && trimmed.contains(')')) {
+        final varName = trimmed.substring(6, trimmed.length - 1);
+        return "Value of '$varName' would print here";
       }
       
       // Default response
@@ -122,4 +133,4 @@ class ExecutionService {
     
     return null;
   }
-                                     }
+}
