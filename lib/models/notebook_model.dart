@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CodeCell {
-  String id;
+  final String id;
   String code;
   String output;
   bool isRunning;
@@ -15,70 +15,69 @@ class CodeCell {
 }
 
 class NotebookModel extends ChangeNotifier {
-  List<CodeCell> cells = [];
+  List<CodeCell> _cells = [];
   int _nextId = 1;
   
+  List<CodeCell> get cells => _cells;
+  
   NotebookModel() {
-    _initPython();
-    addCell();
+    _addInitialCell();
   }
   
-  Future<void> _initPython() async {
-    // Python will be initialized when first cell runs
-    // This is handled by the Python service at runtime
-    print('IDE Ready - Python will load on first execution');
+  void _addInitialCell() {
+    _cells.add(CodeCell(id: 'cell_${_nextId++}'));
+    notifyListeners();
   }
   
   void addCell({String? afterId}) {
     final cell = CodeCell(id: 'cell_${_nextId++}');
     
     if (afterId != null) {
-      final index = cells.indexWhere((c) => c.id == afterId);
-      cells.insert(index + 1, cell);
+      final index = _cells.indexWhere((c) => c.id == afterId);
+      _cells.insert(index + 1, cell);
     } else {
-      cells.add(cell);
+      _cells.add(cell);
     }
     notifyListeners();
   }
   
   void deleteCell(String id) {
-    if (cells.length > 1) {
-      cells.removeWhere((c) => c.id == id);
+    if (_cells.length > 1) {
+      _cells.removeWhere((c) => c.id == id);
       notifyListeners();
     }
   }
   
   void updateCode(String id, String newCode) {
-    final cell = cells.firstWhere((c) => c.id == id);
+    final cell = _cells.firstWhere((c) => c.id == id);
     cell.code = newCode;
     notifyListeners();
   }
   
   void updateOutput(String id, String output) {
-    final cell = cells.firstWhere((c) => c.id == id);
+    final cell = _cells.firstWhere((c) => c.id == id);
     cell.output = output;
     cell.isRunning = false;
     notifyListeners();
   }
   
   void setRunning(String id, bool running) {
-    final cell = cells.firstWhere((c) => c.id == id);
+    final cell = _cells.firstWhere((c) => c.id == id);
     cell.isRunning = running;
     notifyListeners();
   }
   
   void clearAllOutputs() {
-    for (var cell in cells) {
+    for (var cell in _cells) {
       cell.output = '';
     }
     notifyListeners();
   }
   
-  void runAllCells() {
-    for (var cell in cells) {
-      if (cell.code.trim().isNotEmpty) {
-        // Trigger execution (handled by UI)
-      }
-    }
+  void reorderCells(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex--;
+    final cell = _cells.removeAt(oldIndex);
+    _cells.insert(newIndex, cell);
+    notifyListeners();
   }
 }
