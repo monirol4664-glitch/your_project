@@ -27,26 +27,39 @@ jobs:
     
     - name: Manually download and setup Android NDK
       run: |
-        # Create NDK directory
+        # Create the exact directory Buildozer expects
         mkdir -p ~/.buildozer/android/platform/
         cd ~/.buildozer/android/platform/
         
-        # Download NDK r27 (valid, complete URL)
+        # Download NDK with CORRECT URL
         wget https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
         
         # Extract it
         unzip -q android-ndk-r27c-linux.zip
         
-        # Rename to the expected folder name
-        mv android-ndk-r27c android-ndk-27.0.11902837
+        # Create a symlink with the name Buildozer expects
+        ln -s android-ndk-r27c android-ndk-r27
         
-        # Set the environment variable for Buildozer
-        echo "ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-27.0.11902837" >> $GITHUB_ENV
-        echo "ANDROID_NDK_VERSION=27.0.11902837" >> $GITHUB_ENV
+        # Also create version-specific directory
+        ln -s android-ndk-r27c android-ndk-27.0.11902837
+        
+        # List to verify
+        ls -la
     
-    - name: Build APK
+    - name: Build APK with NDK path override
       run: |
+        # Force Buildozer to use our NDK by setting these
+        export ANDROID_NDK=/home/runner/.buildozer/android/platform/android-ndk-r27c
+        export ANDROID_NDK_HOME=/home/runner/.buildozer/android/platform/android-ndk-r27c
+        export ANDROID_NDK_VERSION=27c
+        
+        # Create a .buildozer_override file to prevent download
+        mkdir -p ~/.buildozer/android/platform/
+        touch ~/.buildozer/android/platform/.ndk_downloaded
+        
+        # Run buildozer
         buildozer android debug
+      continue-on-error: false
     
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
