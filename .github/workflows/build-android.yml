@@ -1,4 +1,4 @@
-name: Build Android APK (Unsigned)
+name: Build Android Debug APK
 on:
   push:
     tags:
@@ -24,17 +24,242 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create frontend package.json
+        run: |
+          mkdir -p frontend
+          cat > frontend/package.json << 'EOF'
+          {
+            "name": "python-notebook",
+            "version": "1.0.0",
+            "type": "module",
+            "scripts": {
+              "build": "vite build"
+            },
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0",
+              "@monaco-editor/react": "^4.6.0"
+            },
+            "devDependencies": {
+              "@vitejs/plugin-react": "^4.2.0",
+              "vite": "^5.0.0"
+            }
+          }
+          EOF
+
+      - name: Create vite.config.js
+        run: |
+          cat > frontend/vite.config.js << 'EOF'
+          import { defineConfig } from 'vite'
+          import react from '@vitejs/plugin-react'
+          
+          export default defineConfig({
+            plugins: [react()],
+            server: {
+              port: 3000
+            }
+          })
+          EOF
+
+      - name: Create index.html
+        run: |
+          cat > frontend/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+              <title>Python Notebook</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 0;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                    sans-serif;
+                  -webkit-font-smoothing: antialiased;
+                  -moz-osx-font-smoothing: grayscale;
+                }
+                #root {
+                  height: 100vh;
+                  width: 100vw;
+                }
+              </style>
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/src/main.jsx"></script>
+            </body>
+          </html>
+          EOF
+
+      - name: Create main.jsx
+        run: |
+          mkdir -p frontend/src
+          cat > frontend/src/main.jsx << 'EOF'
+          import React from 'react'
+          import ReactDOM from 'react-dom/client'
+          import PythonEditor from './PythonEditor'
+          
+          ReactDOM.createRoot(document.getElementById('root')).render(
+            <React.StrictMode>
+              <PythonEditor />
+            </React.StrictMode>
+          )
+          EOF
+
+      - name: Create PythonEditor.jsx
+        run: |
+          cat > frontend/src/PythonEditor.jsx << 'EOF'
+          import React, { useRef, useEffect } from 'react';
+          import Editor from '@monaco-editor/react';
+          
+          const PythonEditor = () => {
+            const editorRef = useRef(null);
+          
+            const handleEditorDidMount = (editor, monaco) => {
+              editorRef.current = editor;
+              
+              // Python autocomplete suggestions
+              monaco.languages.registerCompletionItemProvider('python', {
+                provideCompletionItems: () => {
+                  const keywords = [
+                    'def', 'class', 'import', 'from', 'as', 'return', 
+                    'if', 'elif', 'else', 'for', 'while', 'break', 
+                    'continue', 'pass', 'try', 'except', 'finally',
+                    'with', 'as', 'lambda', 'yield', 'assert', 'print',
+                    'len', 'range', 'enumerate', 'zip', 'map', 'filter',
+                    'sorted', 'sum', 'min', 'max', 'abs', 'round', 'type',
+                    'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'bool'
+                  ];
+                  
+                  const suggestions = keywords.map(keyword => ({
+                    label: keyword,
+                    kind: monaco.languages.CompletionItemKind.Keyword,
+                    insertText: keyword,
+                    detail: keyword === 'def' ? 'Define function' : 
+                            keyword === 'class' ? 'Define class' : 'Python keyword'
+                  }));
+                  
+                  return { suggestions };
+                }
+              });
+            };
+          
+            return (
+              <div style={{ height: '100vh', width: '100%' }}>
+                <Editor
+                  height="100%"
+                  defaultLanguage="python"
+                  defaultValue={`# Welcome to Python Notebook!\n# Write your Python code here\n\nprint("Hello, World!")\n\n# Try autocomplete - type 'def ' or 'pri'\n`}
+                  theme="vs-dark"
+                  onMount={handleEditorDidMount}
+                  options={{
+                    fontSize: 16,
+                    minimap: { enabled: true },
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    suggestOnTriggerCharacters: true,
+                    quickSuggestions: true,
+                    acceptSuggestionOnEnter: 'on',
+                    tabCompletion: 'on',
+                    snippetSuggestions: 'top',
+                    parameterHints: { enabled: true },
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    lineNumbers: 'on',
+                    renderWhitespace: 'selection',
+                    cursorBlinking: 'smooth',
+                    scrollBeyondLastLine: false
+                  }}
+                />
+              </div>
+            );
+          };
+          
+          export default PythonEditor;
+          EOF
+
+      - name: Create package-lock.json
+        run: |
+          cd frontend
+          cat > package-lock.json << 'EOF'
+          {
+            "name": "python-notebook",
+            "version": "1.0.0",
+            "lockfileVersion": 3,
+            "requires": true,
+            "packages": {
+              "": {
+                "name": "python-notebook",
+                "version": "1.0.0",
+                "dependencies": {
+                  "@monaco-editor/react": "^4.6.0",
+                  "react": "^18.2.0",
+                  "react-dom": "^18.2.0"
+                },
+                "devDependencies": {
+                  "@vitejs/plugin-react": "^4.2.0",
+                  "vite": "^5.0.0"
+                }
+              }
+            }
+          }
+          EOF
+
       - name: Install dependencies
         run: |
           cd frontend
-          npm ci
+          npm install --no-package-lock
+
+      - name: Build web app
+        run: |
+          cd frontend
           npm run build
-          cd ..
 
       - name: Install Capacitor
         run: |
           npm install -g @capacitor/cli @capacitor/core
           npm install @capacitor/android
+
+      - name: Create capacitor.config.ts
+        run: |
+          cat > capacitor.config.ts << 'EOF'
+          import { CapacitorConfig } from '@capacitor/cli';
+          
+          const config: CapacitorConfig = {
+            appId: 'com.python.notebook',
+            appName: 'Python Notebook',
+            webDir: 'frontend/dist',
+            bundledWebRuntime: false,
+            android: {
+              allowMixedContent: true,
+              captureInput: true,
+              webContentsDebuggingEnabled: true
+            }
+          };
+          
+          export default config;
+          EOF
+
+      - name: Create root package.json
+        run: |
+          cat > package.json << 'EOF'
+          {
+            "name": "python-notebook-apk",
+            "version": "1.0.0",
+            "scripts": {
+              "build": "cd frontend && npm run build"
+            }
+          }
+          EOF
+
+      - name: Initialize Capacitor
+        run: |
+          npx cap init Python Notebook com.python.notebook --web-dir=frontend/dist
 
       - name: Add Android platform
         run: npx cap add android
@@ -42,13 +267,15 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Debug APK (Unsigned)
+      - name: Build Debug APK
         run: |
           cd android
-          ./gradlew assembleDebug   # Notice: assembleDebug, not assembleRelease
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - name: Upload Debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: python-notebook-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
